@@ -156,6 +156,7 @@ class User(db.Model):
         if u and valid_pw(name, pw, u.pw_hash):
             return u
 
+
 class Post(db.Model):
     subject = db.StringProperty(required=True)
     content = db.TextProperty(required=True)
@@ -177,7 +178,8 @@ class Post(db.Model):
 
     @property
     def comments(self):
-        return Comment.all().filter( "post = ", str(self.key().id()) )
+        return Comment.all().filter("post = ", str(self.key().id()))
+
 
 class Comment(db.Model):
     comment = db.StringProperty(required=True)
@@ -287,12 +289,12 @@ class Login(BlogHandler):
             username = self.request.get('username')
             password = self.request.get('password')
 
-            # from @classhandler login, returns the user if (username, password)
+            # from @classhandler login, returns the user if (username,password)
             # is a valid combination
             u = User.login(username, password)
             if u:
-                # this login is from class BlogHandler which sets the cookie using
-                # 'u' which is returned from login(username, password)
+                # this login is from class BlogHandler which sets the cookie
+                # using 'u' which is returned from login(username, password)
                 # (used in class Register as well)
                 self.login(u)
                 self.redirect('/blog')
@@ -307,7 +309,7 @@ class Login(BlogHandler):
 class Logout(BlogHandler):
     def get(self):
         # logout defined in BlogHandler
-        if self.user:            
+        if self.user:
             self.logout()
             self.redirect('/blog')
         else:
@@ -346,7 +348,7 @@ class PostPage(BlogHandler):
 
 class LikeError(BlogHandler):
     def get(self):
-        other_error = "You can't like your own post & can only like a post once."
+        other_error = "You can't like your own post & only like a post once."
         self.render("error.html", other_error=other_error)
 
 
@@ -408,7 +410,7 @@ class UpdatePost(BlogHandler):
             else:
                 self.redirect("/editDeleteError")
 
-    def put(self, post_id):
+    def post(self, post_id):
         if not self.user:
             return self.redirect("/login")
         else:
@@ -451,7 +453,7 @@ class LikePost(BlogHandler):
 
 
 class DeletePost(BlogHandler):
-    def post(self, post_id):
+    def get(self, post_id):
         if not self.user:
             return self.redirect('/login')
         else:
@@ -468,6 +470,7 @@ class DeletePost(BlogHandler):
             else:
                 self.redirect("/editDeleteError")
 
+
 class NewComment(BlogHandler):
     def get(self, post_id):
         #
@@ -480,8 +483,9 @@ class NewComment(BlogHandler):
         post = Post.get_by_id(int(post_id), parent=blog_key())
         subject = post.subject
         content = post.content
-        self.render("newcomment.html", subject=subject, 
+        self.render("newcomment.html", subject=subject,
                     content=content, pkey=post.key())
+
     def post(self, post_id):
         #
         # New comment was made
@@ -503,58 +507,66 @@ class NewComment(BlogHandler):
             self.redirect('/blog/%s' % str(post_id))
         else:
             error = "please provide a comment!"
-            self.render("permalink.html", post = post, 
+            self.render("permalink.html", post=post,
                         content=content, error=error)
+
 
 class UpdateComment(BlogHandler):
     def get(self, post_id, comment_id):
-        post = Post.get_by_id( int(post_id), parent=blog_key() )
-        comment = Comment.get_by_id( int(comment_id), parent=self.user.key() )
+        post = Post.get_by_id(int(post_id), parent=blog_key())
+        comment = Comment.get_by_id(int(comment_id), parent=self.user.key())
         if comment:
-            self.render("updatecomment.html", subject=post.subject, 
+            self.render("updatecomment.html", subject=post.subject,
                         content=post.content, comment=comment.comment)
         else:
             self.redirect('/commenterror')
+
     def post(self, post_id, comment_id):
-        comment = Comment.get_by_id( int(comment_id), parent=self.user.key() )
+        if not self.user:
+            other_error = "please log in first"
+            self.render("error.html", other_error=other_error)
+        comment = Comment.get_by_id(int(comment_id), parent=self.user.key())
         if comment.parent().key().id() == self.user.key().id():
             comment.comment = self.request.get('comment')
             comment.put()
-            self.redirect( '/blog/%s' % str(post_id) )
+            self.redirect('/blog/%s' % str(post_id))
         else:
             other_error = "There was an error updating the comment"
             self.render("error.html", other_error=other_error)
 
+
 class DeleteComment(BlogHandler):
     def get(self, post_id, comment_id):
-        post = Post.get_by_id( int(post_id), parent=blog_key() )
+        post = Post.get_by_id(int(post_id), parent=blog_key())
         # this ensures the user created the comment
-        comment = Comment.get_by_id( int(comment_id), parent=self.user.key() )
+        comment = Comment.get_by_id(int(comment_id), parent=self.user.key())
         if comment:
             comment.delete()
             self.redirect('/blog/%s' % str(post_id))
         else:
             self.redirect('/commenterror')
 
+
 class CommentError(BlogHandler):
     def get(self):
         self.write('You can only edit or delete comments you have created.')
 
 
-app = webapp2.WSGIApplication([('/', BlogFront),
-            ('/blog/?', BlogFront),
-            ('/blog/([0-9]+)', PostPage),
-            ('/blog/newpost', NewPost),
-            ('/blog/([0-9]+)/updatepost', UpdatePost),
-            ('/blog/([0-9]+)/newcomment', NewComment),
-            ('/blog/([0-9]+)/updatecomment/([0-9]+)', UpdateComment),
-            ('/blog/([0-9]+)/deletecomment/([0-9]+)', DeleteComment),
-            ('/commenterror', CommentError),
-            ('/blog/([0-9]+)/like', LikePost),
-            ('/signup', Register),
-            ('/blog/([0-9]+)/deletepost', DeletePost),
-            ('/login', Login),
-            ('/logout', Logout),
-            ('/editDeleteError', EditDeleteError),
-            ('/likeError', LikeError)],
-                              debug=True)
+app = webapp2.WSGIApplication([
+    ('/', BlogFront),
+    ('/blog/?', BlogFront),
+    ('/blog/([0-9]+)', PostPage),
+    ('/blog/newpost', NewPost),
+    ('/blog/([0-9]+)/updatepost', UpdatePost),
+    ('/blog/([0-9]+)/newcomment', NewComment),
+    ('/blog/([0-9]+)/updatecomment/([0-9]+)', UpdateComment),
+    ('/blog/([0-9]+)/deletecomment/([0-9]+)', DeleteComment),
+    ('/commenterror', CommentError),
+    ('/blog/([0-9]+)/like', LikePost),
+    ('/signup', Register),
+    ('/blog/([0-9]+)/deletepost', DeletePost),
+    ('/login', Login),
+    ('/logout', Logout),
+    ('/editDeleteError', EditDeleteError),
+    ('/likeError', LikeError)
+], debug=True)
