@@ -379,7 +379,7 @@ class UpdatePost(BlogHandler):
             else:
                 self.redirect("/editDeleteError")
 
-    def post(self, post_id):
+    def put(self, post_id):
         if not self.user:
             return self.redirect("/login")
         else:
