@@ -209,36 +209,44 @@ def valid_email(email):
 
 class Signup(BlogHandler):
     def get(self):
-        self.render("signup-form.html")
+        if not self.user:
+            self.render("signup-form.html")
+        else:
+            log_error = "Logout before to signup"
+            self.render('signup-form.html', log_error=log_error)
 
     def post(self):
-        have_error = False
-        self.username = self.request.get('username')
-        self.password = self.request.get('password')
-        self.verify = self.request.get('verify')
-        self.email = self.request.get('email')
+        if not self.user:
+            have_error = False
+            self.username = self.request.get('username')
+            self.password = self.request.get('password')
+            self.verify = self.request.get('verify')
+            self.email = self.request.get('email')
 
-        params = dict(username=self.username, email=self.email)
+            params = dict(username=self.username, email=self.email)
 
-        if not valid_username(self.username):
-            params['error_username'] = "That's not a valid username."
-            have_error = True
+            if not valid_username(self.username):
+                params['error_username'] = "That's not a valid username."
+                have_error = True
 
-        if not valid_password(self.password):
-            params['error_password'] = "That wasn't a valid password."
-            have_error = True
-        elif self.password != self.verify:
-            params['error_verify'] = "Your passwords didn't match."
-            have_error = True
+            if not valid_password(self.password):
+                params['error_password'] = "That wasn't a valid password."
+                have_error = True
+            elif self.password != self.verify:
+                params['error_verify'] = "Your passwords didn't match."
+                have_error = True
 
-        if not valid_email(self.email):
-            params['error_email'] = "That's not a valid email."
-            have_error = True
+            if not valid_email(self.email):
+                params['error_email'] = "That's not a valid email."
+                have_error = True
 
-        if have_error:
-            self.render('signup-form.html', **params)
+            if have_error:
+                self.render('signup-form.html', **params)
+            else:
+                self.done()
         else:
-            self.done()
+            log_error = "Logout before to signup"
+            self.render('signup-form.html', log_error=log_error)
 
     def done(self, *a, **kw):
         raise NotImplementedError
@@ -267,31 +275,43 @@ class Register(Signup):
 
 class Login(BlogHandler):
     def get(self):
-        self.render('login-form.html')
+
+        if not self.user:
+            self.render('login-form.html')
+        else:
+            log_error = "You need to log out to login again"
+            self.render('login-form.html', log_error=log_error)
 
     def post(self):
-        username = self.request.get('username')
-        password = self.request.get('password')
+        if not self.user:
+            username = self.request.get('username')
+            password = self.request.get('password')
 
-        # from @classhandler login, returns the user if (username, password)
-        # is a valid combination
-        u = User.login(username, password)
-        if u:
-            # this login is from class BlogHandler which sets the cookie using
-            # 'u' which is returned from login(username, password)
-            # (used in class Register as well)
-            self.login(u)
-            self.redirect('/blog')
+            # from @classhandler login, returns the user if (username, password)
+            # is a valid combination
+            u = User.login(username, password)
+            if u:
+                # this login is from class BlogHandler which sets the cookie using
+                # 'u' which is returned from login(username, password)
+                # (used in class Register as well)
+                self.login(u)
+                self.redirect('/blog')
+            else:
+                msg = 'Invalid login'
+                self.render('login-form.html', error=msg)
         else:
-            msg = 'Invalid login'
-            self.render('login-form.html', error=msg)
+            log_error = "You need to log out to login again"
+            self.render('login-form.html', log_error=log_error)
 
 
 class Logout(BlogHandler):
     def get(self):
         # logout defined in BlogHandler
-        self.logout()
-        self.redirect('/blog')
+        if self.user:            
+            self.logout()
+            self.redirect('/blog')
+        else:
+            self.write('you need to be logged in to log out first')
 
 
 def blog_key(name='default'):
@@ -301,7 +321,11 @@ def blog_key(name='default'):
 class BlogFront(BlogHandler):
     def get(self):
         posts = greetings = Post.all().order('-created')
-        self.render('front.html', posts=posts)
+        if not self.user:
+            self.render('front.html', posts=posts)
+        else:
+            cur_user = self.user.name
+            self.render('front.html', posts=posts, cur_user=cur_user)
 
 
 class PostPage(BlogHandler):
@@ -313,18 +337,23 @@ class PostPage(BlogHandler):
         if not post:
             self.error(404)
             return
-
-        self.render("permalink.html", post=post)
+        if not self.user:
+            self.render("permalink.html", post=post)
+        else:
+            cur_user = self.user.name
+            self.render("permalink.html", post=post, cur_user=cur_user)
 
 
 class LikeError(BlogHandler):
     def get(self):
-        self.write("You can't like your own post & can only like a post once.")
+        other_error = "You can't like your own post & can only like a post once."
+        self.render("error.html", other_error=other_error)
 
 
 class EditDeleteError(BlogHandler):
     def get(self):
-        self.write('You can only edit or delete posts you have created.')
+        other_error = "You can only edit or delete posts you have created."
+        self.render("error.html", other_error=other_error)
 
 
 class NewPost(BlogHandler):
@@ -336,7 +365,7 @@ class NewPost(BlogHandler):
 
     def post(self):
         if not self.user:
-            return self.redirect('/blog')
+            return self.redirect('/login')
 
         subject = self.request.get('subject')
         content = self.request.get('content')
@@ -383,16 +412,23 @@ class UpdatePost(BlogHandler):
         if not self.user:
             return self.redirect("/login")
         else:
-            subject = self.request.get('subject')
-            content = self.request.get('content')
             key = db.Key.from_path('Post', int(post_id), parent=blog_key())
-            p = db.get(key)
-            p.subject = self.request.get('subject')
-            p.content = self.request.get('content')
-            p.put()
-            self.redirect('/blog/%s' % str(p.key().id()))
-            pid = p.key().id()
-            print "pid = ", str(pid)
+            post = db.get(key)
+            n1 = post.created_by
+            n2 = self.user.name
+            print "n1 = ", n1
+            print "n2 = ", n2
+            if n1 == n2:
+                subject = self.request.get('subject')
+                content = self.request.get('content')
+                key = db.Key.from_path('Post', int(post_id), parent=blog_key())
+                p = db.get(key)
+                p.subject = self.request.get('subject')
+                p.content = self.request.get('content')
+                p.put()
+                self.redirect('/blog/%s' % str(p.key().id()))
+                pid = p.key().id()
+                print "pid = ", str(pid)
 
 
 class LikePost(BlogHandler):
@@ -415,7 +451,7 @@ class LikePost(BlogHandler):
 
 
 class DeletePost(BlogHandler):
-    def get(self, post_id):
+    def post(self, post_id):
         if not self.user:
             return self.redirect('/login')
         else:
@@ -484,7 +520,10 @@ class UpdateComment(BlogHandler):
         if comment.parent().key().id() == self.user.key().id():
             comment.comment = self.request.get('comment')
             comment.put()
-        self.redirect( '/blog/%s' % str(post_id) )
+            self.redirect( '/blog/%s' % str(post_id) )
+        else:
+            other_error = "There was an error updating the comment"
+            self.render("error.html", other_error=other_error)
 
 class DeleteComment(BlogHandler):
     def get(self, post_id, comment_id):

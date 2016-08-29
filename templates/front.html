@@ -15,8 +15,10 @@
 
 <div align = "right">
     <a href="/blog/{{p.key().id()}}/like">Like</a>
-	<a href="/blog/{{p.key().id()}}/updatepost">Edit<a>
-	<a href="/blog/{{p.key().id()}}/deletepost">Delete<a>
+    {% if p.created_by == cur_user %}
+		<a href="/blog/{{p.key().id()}}/updatepost">Edit<a>
+		<a href="/blog/{{p.key().id()}}/deletepost">Delete<a>
+	{% endif %}
 	</div>
 <br>
   {% endfor %}

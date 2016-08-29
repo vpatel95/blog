@@ -18,9 +18,11 @@
         <div class="comment">
           <div class="comment-author">{{ c.parent().name }} says:</div>
           <p class="comment-content">{{ c.comment }}</p>
-          <a href="/blog/{{post.key().id()}}/updatecomment/{{c.key().id()}}">update</a>
-          <span class="separator"> | </span>
-          <a href="/blog/{{post.key().id()}}/deletecomment/{{c.key().id()}}">delete</a>
+          {% if c.parent().name == cur_user %}
+            <a href="/blog/{{post.key().id()}}/updatecomment/{{c.key().id()}}">update</a>
+            <span class="separator"> | </span>
+            <a href="/blog/{{post.key().id()}}/deletecomment/{{c.key().id()}}">delete</a>
+          {% endif %}
         </div>
 
       {% endfor %}
