@@ -156,6 +156,37 @@ class User(db.Model):
         if u and valid_pw(name, pw, u.pw_hash):
             return u
 
+class Post(db.Model):
+    subject = db.StringProperty(required=True)
+    content = db.TextProperty(required=True)
+    created = db.DateTimeProperty(auto_now_add=True)
+    last_modified = db.DateTimeProperty(auto_now=True)
+    created_by = db.TextProperty()
+    likes = db.IntegerProperty(required=True)
+    liked_by = db.ListProperty(str)
+
+    @classmethod
+    def by_post_name(cls, name):
+        # select * from User where name = name
+        u = cls.all().filter('name =', name).get()
+        return u
+
+    def render(self):
+        self._render_text = self.content.replace('\n', '<br>')
+        return render_str("post.html", p=self)
+
+    @property
+    def comments(self):
+        return Comment.all().filter( "post = ", str(self.key().id()) )
+
+class Comment(db.Model):
+    comment = db.StringProperty(required=True)
+    post = db.StringProperty(required=True)
+
+    @classmethod
+    def render(self):
+        self.render("comment.html")
+
 
 # blog stuff
 
@@ -267,37 +298,6 @@ def blog_key(name='default'):
     return db.Key.from_path('blogs', name)
 
 
-class Post(db.Model):
-    subject = db.StringProperty(required=True)
-    content = db.TextProperty(required=True)
-    created = db.DateTimeProperty(auto_now_add=True)
-    last_modified = db.DateTimeProperty(auto_now=True)
-    created_by = db.TextProperty()
-    likes = db.IntegerProperty(required=True)
-    liked_by = db.ListProperty(str)
-
-    @classmethod
-    def by_post_name(cls, name):
-        # select * from User where name = name
-        u = cls.all().filter('name =', name).get()
-        return u
-
-    def render(self):
-        self._render_text = self.content.replace('\n', '<br>')
-        return render_str("post.html", p=self)
-
-    @property
-    def comments(self):
-        return Comment.all().filter( "post = ", str(self.key().id()) )
-
-class Comment(db.Model):
-    comment = db.StringProperty(required=True)
-    post = db.StringProperty(required=True)
-
-    @classmethod
-    def render(self):
-        self.render("comment.html")
-
 class BlogFront(BlogHandler):
     def get(self):
         posts = greetings = Post.all().order('-created')
@@ -336,7 +336,7 @@ class NewPost(BlogHandler):
 
     def post(self):
         if not self.user:
-            self.redirect('/blog')
+            return self.redirect('/blog')
 
         subject = self.request.get('subject')
         content = self.request.get('content')
@@ -361,7 +361,7 @@ class NewPost(BlogHandler):
 class UpdatePost(BlogHandler):
     def get(self, post_id):
         if not self.user:
-            self.redirect('/login')
+            return self.redirect('/login')
         else:
             key = db.Key.from_path('Post', int(post_id), parent=blog_key())
             post = db.get(key)
@@ -381,7 +381,7 @@ class UpdatePost(BlogHandler):
 
     def post(self, post_id):
         if not self.user:
-            self.redirect("/login")
+            return self.redirect("/login")
         else:
             subject = self.request.get('subject')
             content = self.request.get('content')
@@ -398,7 +398,7 @@ class UpdatePost(BlogHandler):
 class LikePost(BlogHandler):
     def get(self, post_id):
         if not self.user:
-            self.redirect('/login')
+            return self.redirect('/login')
         else:
             key = db.Key.from_path('Post', int(post_id), parent=blog_key())
             post = db.get(key)
@@ -417,7 +417,7 @@ class LikePost(BlogHandler):
 class DeletePost(BlogHandler):
     def get(self, post_id):
         if not self.user:
-            self.redirect('/login')
+            return self.redirect('/login')
         else:
             key = db.Key.from_path('Post', int(post_id), parent=blog_key())
             post = db.get(key)
@@ -458,7 +458,7 @@ class NewComment(BlogHandler):
             return
         # make sure user is signed in
         if not self.user:
-            self.redirect('login')
+            return self.redirect('login')
         # create comment
         comment = self.request.get('comment')
         if comment:

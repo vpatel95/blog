@@ -9,6 +9,10 @@ body {
     color: #333;
 }
 
+.cancel {
+    font-size: 23px;
+}
+
 .login-area {
     font-size: 13px;
     color: gray;
