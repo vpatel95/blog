@@ -8,7 +8,7 @@ import webapp2
 from string import letters
 from google.appengine.ext import db
 
-secret = 'vedp09'
+secret = ''
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir),
                                autoescape=True)
