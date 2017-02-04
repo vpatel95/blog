@@ -1,5 +1,5 @@
 # blog
-a multi user blog where users can sign in and post blog posts as well as 'Like' and 'Comment' on other posts made on the blog.
+A multi user blog where users can sign in and post blog posts as well as 'Like' and 'Comment' on other posts made on the blog. An authentication system is created for the users to be able to register and sign in and then create blog posts!
 
 ### Requirements
 1. Python 2.7
