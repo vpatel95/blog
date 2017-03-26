@@ -1,6 +1,9 @@
 # blog
 A multi user blog where users can sign in and post blog posts as well as 'Like' and 'Comment' on other posts made on the blog. An authentication system is created for the users to be able to register and sign in and then create blog posts!
 
+## Link to app
+  [Blog](https://blog-141800.appspot.com)
+
 ### Requirements
 1. Python 2.7
 2. jinja for python
@@ -15,4 +18,3 @@ dev_appserver.py .
 ```
 open the browser and visit "http://localhost:8080"
 
-[Link](https://blog-141800.appspot.com) for the live version
